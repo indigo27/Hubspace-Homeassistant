@@ -171,11 +171,11 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
                 and not effect
                 and not temperature
                 and "white" in self._attr_supported_color_modes
+                and kwargs.get("color_mode") is not None
             )
         )
         if requested_white:
             color_mode = "white"
-            # Optionally, clear color/effect/temp to avoid conflicts
             color = None
             effect = None
             temperature = None
@@ -185,6 +185,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
+        # Do not set color_mode to white just because brightness is set
 
         await self.bridge.async_request_call(
             self.controller.set_state,
