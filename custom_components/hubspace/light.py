@@ -163,18 +163,30 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         color: tuple[int, int, int] | None = kwargs.get(ATTR_RGB_COLOR)
         effect: str | None = kwargs.get(ATTR_EFFECT)
         color_mode: str | None = None
-        # Add support for custom "white" mode
-        if (
-            "white" in self._attr_supported_color_modes
-            and kwargs.get("color_mode") == "white"
-        ):
+
+        # Detect if "white" mode was requested by the user
+        requested_white = (
+            kwargs.get("color_mode") == "white"
+            or (
+                not color
+                and not effect
+                and not temperature
+                and "white" in self._attr_supported_color_modes
+            )
+        )
+        if requested_white:
             color_mode = "white"
+            # Optionally, clear color/effect/temp to avoid conflicts
+            color = None
+            effect = None
+            temperature = None
         elif temperature:
             color_mode = "white"
         elif color:
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
+
         await self.bridge.async_request_call(
             self.controller.set_state,
             device_id=self.resource.id,
