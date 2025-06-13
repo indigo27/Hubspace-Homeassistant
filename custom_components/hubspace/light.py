@@ -10,6 +10,7 @@ from homeassistant.components.light import (
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
+    ATTR_WHITE,  # Added import for ATTR_WHITE
     ColorMode,
     LightEntity,
     LightEntityFeature,
@@ -146,6 +147,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         temperature: int | None = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
         color: tuple[int, int, int] | None = kwargs.get(ATTR_RGB_COLOR)
         effect: str | None = kwargs.get(ATTR_EFFECT)
+        white: int | None = kwargs.get(ATTR_WHITE)  # Support for ATTR_WHITE
         color_mode: str | None = None
         if temperature:
             color_mode = "white"
@@ -153,6 +155,8 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
+        elif white is not None:
+            color_mode = "white"
         await self.bridge.async_request_call(
             self.controller.set_state,
             device_id=self.resource.id,
@@ -162,6 +166,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color=color,
             color_mode=color_mode,
             effect=effect,
+            white=white,  # Pass white value if present
         )
 
     @update_decorator
