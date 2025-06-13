@@ -10,7 +10,7 @@ from homeassistant.components.light import (
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
-    ATTR_WHITE,  # Added import for ATTR_WHITE
+    # ColorMode.WHITE does not exist in HA, so use a custom string
     ColorMode,
     LightEntity,
     LightEntityFeature,
@@ -46,6 +46,14 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             supported_color_modes.add(ColorMode.COLOR_TEMP)
         if self.resource.supports_dimming:
             supported_color_modes.add(ColorMode.BRIGHTNESS)
+        # Add support for "white" mode if present in device, but not color_temp
+        if hasattr(self.resource, "supports_white") and self.resource.supports_white:
+            supported_color_modes.add("white")  # Custom mode for white
+        elif (
+            hasattr(self.resource, "color_modes")
+            and "white" in getattr(self.resource, "color_modes", [])
+        ):
+            supported_color_modes.add("white")
         self._attr_supported_color_modes = filter_supported_color_modes(
             supported_color_modes
         )
@@ -62,6 +70,13 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
     @property
     def color_mode(self) -> ColorMode:
         """Get the current color mode for the light."""
+        # Add detection for custom "white" mode
+        if (
+            hasattr(self.resource, "color_mode")
+            and getattr(self.resource.color_mode, "mode", None) == "white"
+        ):
+            if "white" in self._attr_supported_color_modes:
+                return "white"
         return get_color_mode(self.resource, self._attr_supported_color_modes)
 
     @property
@@ -147,16 +162,19 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         temperature: int | None = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
         color: tuple[int, int, int] | None = kwargs.get(ATTR_RGB_COLOR)
         effect: str | None = kwargs.get(ATTR_EFFECT)
-        white: int | None = kwargs.get(ATTR_WHITE)  # Support for ATTR_WHITE
         color_mode: str | None = None
-        if temperature:
+        # Add support for custom "white" mode
+        if (
+            "white" in self._attr_supported_color_modes
+            and kwargs.get("color_mode") == "white"
+        ):
+            color_mode = "white"
+        elif temperature:
             color_mode = "white"
         elif color:
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
-        elif white is not None:
-            color_mode = "white"
         await self.bridge.async_request_call(
             self.controller.set_state,
             device_id=self.resource.id,
@@ -166,7 +184,6 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color=color,
             color_mode=color_mode,
             effect=effect,
-            white=white,  # Pass white value if present
         )
 
     @update_decorator
@@ -190,6 +207,8 @@ def get_color_mode(resource: Light, supported_modes: set[ColorMode]) -> ColorMod
     if resource.color_mode.mode == "color":
         return ColorMode.RGB
     if resource.color_mode.mode == "white":
+        if "white" in supported_modes:
+            return "white"
         if ColorMode.COLOR_TEMP in supported_modes:
             return ColorMode.COLOR_TEMP
         if ColorMode.BRIGHTNESS in supported_modes:
