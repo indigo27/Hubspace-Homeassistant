@@ -188,7 +188,6 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
-        # If only brightness is set, do not change color_mode
 
         await self.bridge.async_request_call(
             self.controller.set_state,
