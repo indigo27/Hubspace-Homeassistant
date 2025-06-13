@@ -163,7 +163,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         effect: str | None = kwargs.get(ATTR_EFFECT)
         color_mode: str | None = None
 
-        # Detect if "white" mode was requested by the user
+        # Restore: allow "white" if no color/effect/temp and "white" is supported
         requested_white = (
             kwargs.get("color_mode") == "white"
             or (
@@ -171,7 +171,6 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
                 and not effect
                 and not temperature
                 and "white" in self._attr_supported_color_modes
-                and kwargs.get("color_mode") is not None
             )
         )
         if requested_white:
