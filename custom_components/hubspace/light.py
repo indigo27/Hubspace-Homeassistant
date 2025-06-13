@@ -163,7 +163,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         effect: str | None = kwargs.get(ATTR_EFFECT)
         color_mode: str | None = None
 
-        # Restore: allow "white" if no color/effect/temp and "white" is supported
+        # Allow selecting white from UI, but don't force on dimming
         requested_white = (
             kwargs.get("color_mode") == "white"
             or (
@@ -171,6 +171,10 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
                 and not effect
                 and not temperature
                 and "white" in self._attr_supported_color_modes
+                and not color  # Only if not in color mode
+                and not effect
+                and not temperature
+                and not kwargs.get(ATTR_BRIGHTNESS)
             )
         )
         if requested_white:
@@ -184,7 +188,7 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             color_mode = "color"
         elif effect:
             color_mode = "sequence"
-        # Do not set color_mode to white just because brightness is set
+        # If only brightness is set, do not change color_mode
 
         await self.bridge.async_request_call(
             self.controller.set_state,
