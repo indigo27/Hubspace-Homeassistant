@@ -10,7 +10,6 @@ from homeassistant.components.light import (
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
-    # ColorMode.WHITE does not exist in HA, so use a custom string
     ColorMode,
     LightEntity,
     LightEntityFeature,
