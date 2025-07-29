@@ -178,30 +178,16 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
             )
             return
 
-        # Allow selecting white from UI, but don't force on dimming
-        requested_white = (
-            color_mode == "white"
-            or (
-                not color
-                and not effect
-                and not temperature
-                and "white" in self._attr_supported_color_modes
-                and not color  # Only if not in color mode
-                and not effect
-                and not temperature
-                and not kwargs.get(ATTR_BRIGHTNESS)
-            )
-        )
-        if requested_white:
-            color_mode = "white"
+        # Only set color_mode to "white" if explicitly requested
+        if color_mode == "white":
             color = None
             effect = None
             temperature = None
-        elif temperature:
-            color_mode = "white"
-        elif color:
+        elif temperature is not None:
+            color_mode = None  # Don't force white, let device decide
+        elif color is not None:
             color_mode = "color"
-        elif effect:
+        elif effect is not None:
             color_mode = "sequence"
 
         await self.bridge.async_request_call(
@@ -254,6 +240,20 @@ async def async_setup_entry(
     """Set up entities."""
     bridge: HubspaceBridge = hass.data[DOMAIN][config_entry.entry_id]
     api: AferoBridgeV1 = bridge.api
+    controller: LightController = api.lights
+    make_entity = partial(HubspaceLight, bridge, controller)
+
+    @callback
+    def async_add_entity(event_type: EventType, resource: Light) -> None:
+        """Add an entity."""
+        async_add_entities([make_entity(resource)])
+
+    # add all current items in controller
+    async_add_entities(make_entity(entity) for entity in controller)
+    # register listener for new entities
+    config_entry.async_on_unload(
+        controller.subscribe(async_add_entity, event_filter=EventType.RESOURCE_ADDED)
+    )
     controller: LightController = api.lights
     make_entity = partial(HubspaceLight, bridge, controller)
 
