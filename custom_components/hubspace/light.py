@@ -161,11 +161,26 @@ class HubspaceLight(HubspaceBaseEntity, LightEntity):
         temperature: int | None = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
         color: tuple[int, int, int] | None = kwargs.get(ATTR_RGB_COLOR)
         effect: str | None = kwargs.get(ATTR_EFFECT)
-        color_mode: str | None = None
+        color_mode: str | None = kwargs.get("color_mode")
+
+        # If no attributes are specified, only send 'on' to preserve last state
+        if (
+            brightness is None
+            and temperature is None
+            and color is None
+            and effect is None
+            and color_mode is None
+        ):
+            await self.bridge.async_request_call(
+                self.controller.set_state,
+                device_id=self.resource.id,
+                on=True,
+            )
+            return
 
         # Allow selecting white from UI, but don't force on dimming
         requested_white = (
-            kwargs.get("color_mode") == "white"
+            color_mode == "white"
             or (
                 not color
                 and not effect
